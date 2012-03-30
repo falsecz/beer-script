@@ -63,6 +63,7 @@ exports.Base = class Base
       [ref, ref]
     else
       ref = new Literal reused or o.scope.freeVariable 'ref'
+      #console.log 'cache'
       sub = new Assign ref, this
       if level then [sub.compile(o, level), ref.value] else [sub, ref]
 
@@ -208,7 +209,78 @@ exports.Block = class Block extends Base
   # A **Block** is the only node that can serve as the root.
   compile: (o = {}, level) ->
     if o.scope then super o, level else @compileRoot o
+  
+  privatizeNode: (o) ->
+    for expression,i in @expressions
+      if expression?.body?.classBody
+        x =  o.scope.expressions.expressions?[i]?.variable
+        if x?.properties? and x?.base?.value? 
+          
+          prefix = '$' + x.base.value
+#          @prefix = prefix
+          for p in x.properties
+            if p?.name?.value?
+              prefix += '_' + p.name.value 
+      
+#          console.log JSON.stringify expression  #[0].body.expressions[0].base
+ #         console.log '######################//////'
+          @r prefix, expression
+        
+          # if @expressions[0].body.expressions?[0]?.base?
+          #   @r prefix, @expressions[0].body.expressions[0].base
+          #  @privatizeNodeR prefix, @expressions[0].body.expressions[0].base.properties
 
+  r: (prefix, node)->
+    for key, value of node
+      if typeof value is 'object' or typeof value is 'array'
+        @r prefix, value
+      else if key == 'value'
+#        node
+        if value?.substr(0,1) is '_' and value != '_super'
+          #console.log "v= " + JSON.stringify node[key]
+          node[key] = prefix + value
+
+
+  privatizeExps: (prefix, exps) ->
+    #console.log "EEEEEEE " + JSON.stringify exps
+    #console.log "\n"
+    
+    
+    for exp in exps
+      #console.log JSON.stringify exp
+      if exp.args?[0]?.body?.expressions?
+          #console.log "============================"
+          r2 = exp.args[0].body.expressions
+          #console.log JSON.stringify r2
+          @privatizeExps prefix, r2
+          #console.log "&&&&&&&&&&&&&&&&&&&&"
+
+
+      #console.log "xpxpxpxpxpxp " + JSON.stringify exps
+      #console.log "\n"
+      
+      param = null
+      if exp.variable?
+        param = exp.variable.properties?[0]?.name
+      else
+        param = exp.properties?[0]?.name
+        
+      @privatizeParam prefix, param
+  privatizeNodeR: (prefix, xxx) ->
+    for p in xxx
+      if p.value?.body
+        exps = p.value.body.expressions
+        @privatizeExps prefix, exps
+
+  privatizeParam: (prefix, param) ->
+    if param
+      #console.log param
+      if param.value.substr(0,1) == '_'
+        param.value = prefix + param.value
+
+      #console.log '----'
+    
+  
   # Compile all expressions within the **Block** body. If we need to
   # return the result, and it's an expression, simply return it. If it's a
   # statement, ask the statement to do so.
@@ -216,6 +288,8 @@ exports.Block = class Block extends Base
     @tab  = o.indent
     top   = o.level is LEVEL_TOP
     codes = []
+    @privatizeNode o
+
     for node in @expressions
       node = node.unwrapAll()
       node = (node.unfoldSoak(o) or node)
@@ -266,6 +340,19 @@ exports.Block = class Block extends Base
   # Compile the expressions body for the contents of a function, with
   # declarations of all inner variables pushed up to the top.
   compileWithDeclarations: (o) ->
+#    console.log "\n\n"
+#    console.log JSON.stringify o 
+#    console.log "\n\n"
+    # try 
+    #   x =  o.scope.expressions.expressions[0].variable
+    #   prefix = '_' + x.base.value
+    #   prefix += '_' + p.name.value for p in x.properties
+    #   console.log ">>>>>>>>>>>>>>>>>>>>>" + prefix
+    #   prom = o.scope.expressions.expressions[0].body.expressions[0].base.properties[0].value.body.expressions[0].variable.properties[0].name
+    #   if prom.value.substr(0,1) is '_'
+    #     prom.value = prefix + prom.value
+    # catch err
+    #     
     code = post = ''
     for exp, i in @expressions
       exp = exp.unwrap()
@@ -277,6 +364,24 @@ exports.Block = class Block extends Base
       [code  , @spaced] = [(@compileNode o), spaced]
       @expressions = rest
     post = @compileNode o
+#     console.log 'TTTTTTTTTTT'
+#     console.log post
+#     console.log '----'
+#     console.log o
+#     console.log 'UUUUUUUUUUU'
+# #    {_asdasd,_asdasdsd} = asdasd
+#     try 
+#       x =  o.scope.expressions.expressions[0].variable
+#       prefix = '_' + x.base.value
+#       prefix += '_' + p.name.value for p in x.properties
+#       console.log ">>>>>>>>>>>>>>>>>>>>>" + prefix
+#       prom = o.scope.expressions.expressions[0].body.expressions[0].base.properties[0].value.body.expressions[0].variable.properties[0].name
+#       if prom.value.substr(0,1) is '_'
+#         prom.value = prefix + prom.value
+#     catch err
+# 
+    
+    
     {scope} = o
     if scope.expressions is this
       declars = o.scope.hasDeclarations()
@@ -911,10 +1016,18 @@ exports.Class = class Class extends Base
             if func.bound
               func.context = name
           else
+            # if base.value.substr(0,1) is '_'
+            #   prefix = '_' + @variable.base.value
+            #   prefix += '_' +  p.name.value for p in @variable.properties
+            #   base.value = prefix + base.value
             assign.variable = new Value(new Literal(name), [(new Access new Literal 'prototype'), new Access base ])
             if func instanceof Code and func.bound
               @boundFuncs.push base
               func.bound = no
+#      console.log "Obj: " + JSON.stringify assign 
+#      console.log "Obj: " + JSON.stringify assign 
+#      console.log '%%%%--------%%%%'
+
       assign
     compact exprs
 
@@ -968,6 +1081,15 @@ exports.Class = class Class extends Base
     @body.expressions.unshift @ctor unless @ctor instanceof Code
     if decl
       @body.expressions.unshift new Assign (new Value (new Literal name), [new Access new Literal 'name']), (new Literal "'#{name}'")
+      #console.log JSON.stringify @variable
+      prefix = '$' + @variable.base.value
+#          @prefix = prefix
+      for p in @variable.properties
+        if p?.name?.value?
+          prefix += '_' + p.name.value 
+
+      #@body.expressions.unshift new Assign (new Value (new Literal name), [new Access new Literal '$private']), (new Literal "'#{prefix}_'")
+      @body.expressions.unshift new Assign (new Value (new Literal '$private')), (new Literal "'#{prefix}_'")
     @body.expressions.push lname
     @body.expressions.unshift @directives...
     @addBoundFunctions o
@@ -991,6 +1113,17 @@ exports.Class = class Class extends Base
 # property of an object -- including within object literals.
 exports.Assign = class Assign extends Base
   constructor: (@variable, @value, @context, options) ->
+#    console.log '%% Assign %% ' + JSON.stringify(arguments) + "\n"
+    # if @variable.properties?[0]?.name?.value?
+    #   pname = @variable.properties[0].name.value
+    #   if pname.substr(0,1) is '_'
+    #     console.log JSON.stringify variable 
+    #     console.log value 
+    #     console.log options 
+    #     console.log '------------------' 
+    #     #@variable.properties[0].name.value = 'XX_SEM_DOSTAT_CLASSNAME_XX_' + pname
+    #     #throw new Error
+
     @param = options and options.param
     @subpattern = options and options.subpattern
     forbidden = (name = @variable.unwrapAll().value) in STRICT_PROSCRIBED
@@ -1211,6 +1344,8 @@ exports.Code = class Code extends Base
     code  = 'function'
     code  += ' ' + @name if @ctor
     code  += '(' + params.join(', ') + ') {'
+#    console.log '1123' + JSON.stringify @body
+#    console.log "\n" + '>>>>>' + JSON.stringify(o) + "\n"
     code  += "\n#{ @body.compileWithDeclarations o }\n#{@tab}" unless @body.isEmpty()
     code  += '}'
     return @tab + code if @ctor
@@ -1950,7 +2085,11 @@ UTILITIES =
   # Correctly set up a prototype chain for inheritance, including a reference
   # to the superclass for `super()` calls, and copies of any static properties.
   extends: -> """
-    function(child, parent) { for (var key in parent) { if (#{utility 'hasProp'}.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }
+    function(child, parent) {
+      for (var key in parent) { if (#{utility 'hasProp'}.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; 
+      child.superClass_ = parent.prototype; 
+      return child; 
+    }
   """
 
   # Create a function bound to the current value of "this".
