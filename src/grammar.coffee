@@ -98,6 +98,8 @@ grammar =
     o 'Switch'
     o 'Class'
     o 'Throw'
+    o 'Enumeration'
+
   ]
 
   # An indented block of expressions. Note that the [Rewriter](rewriter.html)
@@ -371,6 +373,11 @@ grammar =
     o 'SimpleArgs , Expression',                -> [].concat $1, $3
   ]
 
+  # The variants of *try/catch/finally* exception handling blocks.
+  Enumeration: [
+    o 'ENUMERATION Namespace',                      -> new Class $2
+    o 'ENUMERATION Namespace AS IDENTIFIER',        -> new Class $2
+  ]
   # The variants of *try/catch/finally* exception handling blocks.
   Try: [
     o 'TRY Block',                              -> new Try $2
