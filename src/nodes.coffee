@@ -333,9 +333,17 @@ exports.Block = class Block extends Base
       @expressions = preludeExps
       prelude = "#{@compileNode merge(o, indent: '')}\n" if preludeExps.length
       @expressions = rest
+
     code = @compileWithDeclarations o
-    return code if o.bare
-    "#{prelude}(function() {\n#{code}\n}).call(this);\n"
+
+    requires = ""
+    if o.goog
+      provides = {}
+      provides[p] = "goog.provide('#{p}');\n" for p in o.goog.provides
+      requires += v for k, v of provides
+
+    return "#{requires}\n#{code}" if o.bare
+    "#{prelude}\n#{requires}\n(function() {\n#{code}\n}).call(this);\n"
 
   # Compile the expressions body for the contents of a function, with
   # declarations of all inner variables pushed up to the top.
@@ -1102,6 +1110,9 @@ exports.Class = class Class extends Base
       call.args.push @parent
       params = call.variable.params or call.variable.base.params
       params.push new Param @superClass
+
+    if o.goog
+      o.goog.provides.push @variable.compile o
 
     klass = new Parens call, yes
     klass = new Assign @variable, klass if @variable

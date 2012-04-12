@@ -19,6 +19,7 @@
 												
   * support for @_private
   * support for @[$private + 'private']
+  * support for goog.provide via --goog switch
 
 
   CoffeeScript is a little language that compiles into JavaScript.
