@@ -1,4 +1,3 @@
-
             
                                       ____     
                                      |  _ \    
@@ -26,10 +25,6 @@
 
 
 
-	enumeration builder.ui.ColumnLayout.ORIENTATION
-	   VERTICAL: 'vertical'
-	   BLA: 'horizontal'
-
 ```coffee
 include goog.dom as dom
 include builder.ui.Component as bui
@@ -41,7 +36,7 @@ class builder.ui.ColumnLayout extends goog.ui.Component
     
 enumeration builder.ui.ColumnLayout.ORIENTATION
    VERTICAL: 'vertical'
-   BLA: 'horizontal'
+   HORIZONTAL: 'horizontal'
 ```
 
 ```javascript

@@ -1,8 +1,8 @@
 {
-  "name":         "coffee-script",
-  "description":  "Unfancy JavaScript",
-  "keywords":     ["javascript", "language", "coffeescript", "compiler"],
-  "author":       "Jeremy Ashkenas",
+  "name":         "beer-script",
+  "description":  "Unfancy JavaScript - beerscript",
+  "keywords":     ["javascript", "language", "coffeescript", "compiler", "beerscript"],
+  "author":       "Jeremy Ashkenas, Lukas Benes, Lukas Weber",
   "version":      "1.3.1",
   "licenses":     [{
     "type":       "MIT",
@@ -22,7 +22,7 @@
   "homepage":     "http://coffeescript.org",
   "repository":   {
     "type": "git",
-    "url": "git://github.com/jashkenas/coffee-script.git"
+    "url": "git://github.com/falsecz/beer-script.git"
   },
   "devDependencies": {
     "uglify-js":  ">=1.0.0",
