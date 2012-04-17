@@ -36,7 +36,7 @@ class builder.ui.ColumnLayout extends goog.ui.Component
     
 enumeration builder.ui.ColumnLayout.ORIENTATION
    VERTICAL: 'vertical'
-   BLA: 'horizontal'
+   HORIZONTAL: 'horizontal'
 ```
 
 ```javascript
