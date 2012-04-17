@@ -1,4 +1,3 @@
-
             
                                       ____     
                                      |  _ \    
@@ -25,10 +24,6 @@
   * support for enumeration
 
 
-
-	enumeration builder.ui.ColumnLayout.ORIENTATION
-	   VERTICAL: 'vertical'
-	   BLA: 'horizontal'
 
 ```coffee
 include goog.dom as dom
