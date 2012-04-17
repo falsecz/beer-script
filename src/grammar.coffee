@@ -98,6 +98,7 @@ grammar =
     o 'Switch'
     o 'Class'
     o 'Throw'
+    o 'Include'
     o 'Enumeration'
 
   ]
@@ -373,10 +374,37 @@ grammar =
     o 'SimpleArgs , Expression',                -> [].concat $1, $3
   ]
 
-  # The variants of *try/catch/finally* exception handling blocks.
+  # An include statement, in either of the following forms:
+  #
+  # include goog.dom
+  # include goog.dom.TagName as TagName
+  Include: [
+    o 'INCLUDE Namespace',                      -> new Include $2
+    o 'INCLUDE Namespace AS Identifier',        -> new Include $2, $4
+  ]
+
+  Namespace: [
+    o 'IDENTIFIER',                             -> new Namespace $1
+    o 'Namespace . IDENTIFIER',                 -> new Namespace $3, $1
+  ]
+  
   Enumeration: [
-    o 'ENUMERATION Namespace',                      -> new Class $2
-    o 'ENUMERATION Namespace AS IDENTIFIER',        -> new Class $2
+    # o 'ENUMERATION SimpleAssignable',           -> new Enumeration $2
+    o 'ENUMERATION Namespace Block',     -> new Enumeration $2, $3
+    # o 'ENUMERATION',                                           -> new Class
+    # o 'ENUMERATION Block',                                     -> new Class null, null, $2
+    # o 'ENUMERATION EXTENDS Expression',                        -> new Class null, $3
+    # o 'ENUMERATION EXTENDS Expression Block',                  -> new Class null, $3, $4
+    # o 'ENUMERATION SimpleAssignable',                          -> new Class $2
+    # o 'ENUMERATION SimpleAssignable Block',                    -> new Class $2, null, $3
+    # o 'ENUMERATION SimpleAssignable EXTENDS Expression',       -> new Class $2, $4
+    # o 'ENUMERATION SimpleAssignable EXTENDS Expression Block', -> new Class $2, $4, $5
+
+#    o 'CLASS SimpleAssignable',                          -> new Class $2
+#    o 'CLASS SimpleAssignable Block',                    -> new Class $2, null, $3
+
+
+#    o 'ENUMERATION Namespace AS Identifier',        -> new Class $2
   ]
   # The variants of *try/catch/finally* exception handling blocks.
   Try: [
@@ -576,7 +604,7 @@ operators = [
   ['nonassoc',  'INDENT', 'OUTDENT']
   ['right',     '=', ':', 'COMPOUND_ASSIGN', 'RETURN', 'THROW', 'EXTENDS']
   ['right',     'FORIN', 'FOROF', 'BY', 'WHEN']
-  ['right',     'IF', 'ELSE', 'FOR', 'WHILE', 'UNTIL', 'LOOP', 'SUPER', 'CLASS']
+  ['right',     'IF', 'ELSE', 'FOR', 'WHILE', 'UNTIL', 'LOOP', 'SUPER', 'CLASS', 'ENUMERATION']
   ['right',     'POST_IF']
 ]
 

@@ -336,14 +336,36 @@ exports.Block = class Block extends Base
 
     code = @compileWithDeclarations o
 
-    requires = ""
+    providesJs = ""
+    includesJs = ""
     if o.goog
-      provides = {}
-      provides[p] = "goog.provide('#{p}');\n" for p in o.goog.provides
-      requires += v for k, v of provides
+      providesUniq = {}
+      providesUniq[p] = "goog.provide('#{p}');\n" for p in o.goog.provides
+      providesJs += v for k, v of providesUniq
 
-    return "#{requires}\n#{code}" if o.bare
-    "#{prelude}\n#{requires}\n(function() {\n#{code}\n}).call(this);\n"
+      includes = o.goog.includes
+      comparator = (a, b) -> a.name.localeCompare(b.name)
+      includes.sort comparator
+      includesJs = ("goog.require('#{inc.name}');" for inc in includes)
+      includesJs = includesJs.join '\n'
+
+      aliases = (inc for inc in includes when inc.alias)
+      aliases.sort comparator
+      idt = @tab + TAB
+      aliases = ("#{o.indent}var #{inc.alias.value} = '#{inc.name}';" for inc in aliases)
+      aliases = aliases.join '\n'
+      
+      code = """
+        #{providesJs}
+        #{includesJs}
+        goog.scope(function() {
+          #{aliases}
+          #{code}
+        }); // close goog.scope()        
+      """
+    
+    return "#{code}" if o.bare
+    "#{prelude}\n(function() {\n#{code}\n}).call(this);\n"
 
   # Compile the expressions body for the contents of a function, with
   # declarations of all inner variables pushed up to the top.
@@ -1088,15 +1110,11 @@ exports.Class = class Class extends Base
     @body.spaced = yes
     @body.expressions.unshift @ctor unless @ctor instanceof Code
     if decl
-      @body.expressions.unshift new Assign (new Value (new Literal name), [new Access new Literal 'name']), (new Literal "'#{name}'")
-      #console.log JSON.stringify @variable
+      #@body.expressions.unshift new Assign (new Value (new Literal name), [new Access new Literal 'name']), (new Literal "'#{name}'")
       prefix = '$' + @variable.base.value
-#          @prefix = prefix
       for p in @variable.properties
         if p?.name?.value?
           prefix += '_' + p.name.value 
-
-      #@body.expressions.unshift new Assign (new Value (new Literal name), [new Access new Literal '$private']), (new Literal "'#{prefix}_'")
       @body.expressions.unshift new Assign (new Value (new Literal '$private')), (new Literal "'#{prefix}_'")
     @body.expressions.push lname
     @body.expressions.unshift @directives...
@@ -1263,7 +1281,8 @@ exports.Assign = class Assign extends Base
   compileConditional: (o) ->
     [left, right] = @variable.cacheReference o
     # Disallow conditional assignment of undefined variables.
-    if left.base instanceof Literal and left.base.value != "this" and not o.scope.check left.base.value
+    if not left.properties.length and left.base instanceof Literal and 
+           left.base.value != "this" and not o.scope.check left.base.value
       throw new Error "the variable \"#{left.base.value}\" can't be assigned with #{@context} because it has not been defined."
     if "?" in @context then o.isExistentialEquals = true
     new Op(@context[...-1], left, new Assign(right, @value, '=') ).compile o
@@ -1321,7 +1340,9 @@ exports.Code = class Code extends Base
     for name in @paramNames() # this step must be performed before the others
       unless o.scope.check name then o.scope.parameter name
     for param in @params when param.splat
-      o.scope.add p.name.value, 'var', yes for p in @params when p.name.value
+      for {name: p} in @params
+        if p.this then p = p.properties[0].name
+        if p.value then o.scope.add p.value, 'var', yes
       splats = new Assign new Value(new Arr(p.asReference o for p in @params)),
                           new Value new Literal 'arguments'
       break
@@ -1346,6 +1367,11 @@ exports.Code = class Code extends Base
       throw SyntaxError "multiple parameters named '#{name}'" if name in uniqs
       uniqs.push name
     @body.makeReturn() unless wasEmpty or @noReturn
+    
+    if @ctorParent and o.goog
+      parentClassName = @ctorParent.compile o
+      o.goog.includes.push {name: "'#{parentClassName}'", alias: null}
+    
     if @bound
       if o.scope.parent.method?.bound
         @bound = @context = o.scope.parent.method.context
@@ -1765,6 +1791,55 @@ exports.Throw = class Throw extends Base
   compileNode: (o) ->
     @tab + "throw #{ @expression.compile o };"
 
+
+exports.Enumeration = class Enumeration extends Base
+  constructor: (@namespace, @definition = null) ->
+  compileNode: (o) ->
+    ns = @namespace.flatten()
+    if o.goog
+      o.goog.provides.push ns
+
+    props = []
+    for prop in @definition.expressions[0].base.properties
+      if prop.variable
+        props.push "#{o.indent}#{@tab}#{prop.variable.base.value}: #{prop.value.base.value}"
+        
+    if props
+      propsJs = props.join ",\n"
+      return "#{ns} = {\n#{propsJs}\n#{o.indent}}"
+    ""
+
+
+# Simple node to goog.require() a library.
+exports.Include = class Include extends Base
+  isStatement:     YES
+  constructor: (@namespace, @alias = null) ->
+
+  compileNode: (o) ->
+    if o.goog
+      o.goog.includes.push {name: @namespace.flatten(), alias: @alias}
+    ""
+#### Namespace
+
+# A chain of identifiers that form a namespace.
+# For example, the namespace goog.dom.TagName is a chain of three identifiers:
+# TagName, dom, and goog. 
+exports.Namespace = class Namespace extends Base
+  isStatement: YES
+  constructor: (@identifier, @namespace = null) ->
+
+  flatten: ->
+    ns = @namespace
+    ids = [@identifier]
+    while ns
+      ids.unshift ns.identifier
+      ns = ns.namespace
+    ids.join '.'
+
+  compileNode: (o) ->
+    @flatten()
+    ""
+
 #### Existence
 
 # Checks a variable for existence -- not *null* and not *undefined*. This is
@@ -2017,17 +2092,7 @@ exports.If = class If extends Base
     cond     = @condition.compile o, LEVEL_PAREN
     o.indent += TAB
     body     = @ensureBlock(@body)
-    bodyc    = body.compile o
-    if (
-      1 is body.expressions?.length and
-      !@elseBody and !child and
-      bodyc and cond and
-      -1 is (bodyc.indexOf '\n') and
-      80 > cond.length + bodyc.length
-    )
-      return "#{@tab}if (#{cond}) #{bodyc.replace /^\s+/, ''}"
-    bodyc    = "\n#{bodyc}\n#{@tab}" if bodyc
-    ifPart   = "if (#{cond}) {#{bodyc}}"
+    ifPart   = "if (#{cond}) {\n#{body.compile(o)}\n#{@tab}}"
     ifPart   = @tab + ifPart unless child
     return ifPart unless @elseBody
     ifPart + ' else ' + if @isChain

@@ -153,13 +153,13 @@ class exports.Rewriter
     condition = (token, i) ->
       [tag] = token
       return yes if not seenSingle and token.fromThen
-      seenSingle  = yes if tag in ['IF', 'ELSE', 'CATCH', '->', '=>', 'CLASS']
+      seenSingle  = yes if tag in ['IF', 'ELSE', 'CATCH', '->', '=>', 'CLASS', 'ENUMERATION']
       seenControl = yes if tag in ['IF', 'ELSE', 'SWITCH', 'TRY', '=']
       return yes if tag in ['.', '?.', '::'] and @tag(i - 1) is 'OUTDENT'
       not token.generated and @tag(i - 1) isnt ',' and (tag in IMPLICIT_END or
         (tag is 'INDENT' and not seenControl)) and
         (tag isnt 'INDENT' or
-          (@tag(i - 2) not in ['CLASS', 'EXTENDS'] and @tag(i - 1) not in IMPLICIT_BLOCK and
+          (@tag(i - 2) not in ['CLASS', 'EXTENDS', 'ENUMERATION'] and @tag(i - 1) not in IMPLICIT_BLOCK and
           not ((post = @tokens[i + 1]) and post.generated and post[0] is '{')))
 
     action = (token, i) ->
@@ -167,7 +167,7 @@ class exports.Rewriter
 
     @scanTokens (token, i, tokens) ->
       tag     = token[0]
-      noCall  = yes if tag in ['CLASS', 'IF', 'FOR', 'WHILE']
+      noCall  = yes if tag in ['CLASS', 'IF', 'FOR', 'WHILE', 'ENUMERATION']
       [prev, current, next] = tokens[i - 1 .. i + 1]
       callObject  = not noCall and tag is 'INDENT' and
                     next and next.generated and next[0] is '{' and
@@ -291,7 +291,7 @@ IMPLICIT_FUNC    = ['IDENTIFIER', 'SUPER', ')', 'CALL_END', ']', 'INDEX_END', '@
 
 # If preceded by an `IMPLICIT_FUNC`, indicates a function invocation.
 IMPLICIT_CALL    = [
-  'IDENTIFIER', 'NUMBER', 'STRING', 'JS', 'REGEX', 'NEW', 'PARAM_START', 'CLASS'
+  'IDENTIFIER', 'NUMBER', 'STRING', 'JS', 'REGEX', 'NEW', 'PARAM_START', 'CLASS', 'ENUMERATION'
   'IF', 'TRY', 'SWITCH', 'THIS', 'BOOL', 'UNARY', 'SUPER'
   '@', '->', '=>', '[', '(', '{', '--', '++'
 ]
