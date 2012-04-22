@@ -291,6 +291,9 @@ grammar =
     o 'CLASS SimpleAssignable Block',                    -> new Class $2, null, $3
     o 'CLASS SimpleAssignable EXTENDS Expression',       -> new Class $2, $4
     o 'CLASS SimpleAssignable EXTENDS Expression Block', -> new Class $2, $4, $5
+
+    o 'CLASS SimpleAssignable IMPLEMENTS Expression Block',                    -> new Class $2, null, $5
+
   ]
 
   # Ordinary function invocation, or a chained series of calls.
@@ -575,6 +578,7 @@ grammar =
     o 'SimpleAssignable COMPOUND_ASSIGN
        INDENT Expression OUTDENT',              -> new Assign $1, $4, $2
     o 'SimpleAssignable EXTENDS Expression',    -> new Extends $1, $3
+    o 'SimpleAssignable IMPLEMENTS Expression',    -> new Implements $1, $3
   ]
 
 
@@ -602,7 +606,7 @@ operators = [
   ['left',      'COMPARE']
   ['left',      'LOGIC']
   ['nonassoc',  'INDENT', 'OUTDENT']
-  ['right',     '=', ':', 'COMPOUND_ASSIGN', 'RETURN', 'THROW', 'EXTENDS']
+  ['right',     '=', ':', 'COMPOUND_ASSIGN', 'RETURN', 'THROW', 'EXTENDS', 'IMPLEMENTS']
   ['right',     'FORIN', 'FOROF', 'BY', 'WHEN']
   ['right',     'IF', 'ELSE', 'FOR', 'WHILE', 'UNTIL', 'LOOP', 'SUPER', 'CLASS', 'ENUMERATION']
   ['right',     'POST_IF']

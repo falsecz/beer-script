@@ -352,7 +352,7 @@ exports.Block = class Block extends Base
       aliases = (inc for inc in includes when inc.alias)
       aliases.sort comparator
       idt = @tab + TAB
-      aliases = ("#{o.indent}var #{inc.alias.value} = '#{inc.name}';" for inc in aliases)
+      aliases = ("#{o.indent}var #{inc.alias.value} = #{inc.name};" for inc in aliases)
       aliases = aliases.join '\n'
       
       code = """

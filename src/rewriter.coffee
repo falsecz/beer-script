@@ -159,7 +159,7 @@ class exports.Rewriter
       not token.generated and @tag(i - 1) isnt ',' and (tag in IMPLICIT_END or
         (tag is 'INDENT' and not seenControl)) and
         (tag isnt 'INDENT' or
-          (@tag(i - 2) not in ['CLASS', 'EXTENDS', 'ENUMERATION'] and @tag(i - 1) not in IMPLICIT_BLOCK and
+          (@tag(i - 2) not in ['CLASS', 'EXTENDS', 'IMPLEMENTS', 'ENUMERATION'] and @tag(i - 1) not in IMPLICIT_BLOCK and
           not ((post = @tokens[i + 1]) and post.generated and post[0] is '{')))
 
     action = (token, i) ->
