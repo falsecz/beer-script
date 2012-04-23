@@ -47,8 +47,8 @@ goog.require('builder.ui.Component');
 goog.require('goog.dom');
 
 goog.scope(function () {
-    var bui = 'builder.ui.Component';
-    var dom = 'goog.dom';
+    var bui = builder.ui.Component;
+    var dom = goog.dom;
 
 
     builder.ui.ColumnLayout = (function (_super) {
