@@ -1,4 +1,5 @@
-            
+[![Build Status](https://travis-ci.org/falsecz/beer-script.png?branch=master)](undefined)
+
                                       ____     
                                      |  _ \    
      .- ----------- -.               | |_) | ___  ___ _ __ 
