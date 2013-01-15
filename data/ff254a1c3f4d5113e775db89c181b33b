@@ -1,0 +1,11 @@
+builder = {}
+builder.ui = {}
+
+class builder.ui.Test
+  _privatniProperta: 10 #hotovo
+  _privatniMetoda: -> # hotovo
+    
+  publicMetoda: ->
+    @_privatniProperta #zatim nejde
+  
+  
