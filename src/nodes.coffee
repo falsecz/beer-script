@@ -2198,7 +2198,7 @@ UTILITIES =
     for (var _i = 0, _l = mixins.length; _i < _l; _i++) {
       _tmp = mixins[_i];
       for (_prop in _tmp) {
-        base[_prop] = _tmp[_prop];
+        base.prototype[_prop] = _tmp[_prop];
       }
     }
   }
