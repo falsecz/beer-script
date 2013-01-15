@@ -22,8 +22,8 @@
   "scripts": {
     "test": "node ./bin/cake test"
   },
-  "homepage":     "http://coffeescript.org",
-  "bugs":         "https://github.com/jashkenas/coffee-script/issues",
+  "homepage":     "https://github.com/falsecz/beer-script/",
+  "bugs":         "https://github.com/falsecz/beer-script/issues",
   "repository":   {
     "type": "git",
     "url": "git://github.com/falsecz/beer-script.git"
