@@ -7,7 +7,7 @@
 {RESERVED, STRICT_PROSCRIBED} = require './lexer'
 
 # Import the helpers we plan to use.
-{compact, flatten, extend, merge, del, starts, ends, last} = require './helpers'
+{compact, flatten, extend, merge, del, starts, ends, last, some} = require './helpers'
 
 exports.extend = extend  # for parser
 
@@ -460,9 +460,7 @@ exports.Literal = class Literal extends Base
     return this if @value is 'continue' and not o?.loop
 
   compileNode: (o) ->
-    code = if @isUndefined
-      if o.level >= LEVEL_ACCESS then '(void 0)' else 'void 0'
-    else if @value is 'this'
+    code = if @value is 'this'
       if o.scope.method?.bound then o.scope.method.context else @value
     else if @value.reserved
       "\"#{@value}\""
@@ -472,6 +470,23 @@ exports.Literal = class Literal extends Base
 
   toString: ->
     ' "' + @value + '"'
+
+class exports.Undefined extends Base
+  isAssignable: NO
+  isComplex: NO
+  compileNode: (o) ->
+    if o.level >= LEVEL_ACCESS then '(void 0)' else 'void 0'
+
+class exports.Null extends Base
+  isAssignable: NO
+  isComplex: NO
+  compileNode: -> "null"
+
+class exports.Bool extends Base
+  isAssignable: NO
+  isComplex: NO
+  compileNode: -> @val
+  constructor: (@val) ->
 
 #### Return
 
@@ -631,7 +646,7 @@ exports.Call = class Call extends Base
   # Grab the reference to the superclass's implementation of the current
   # method.
   superReference: (o) ->
-    {method} = o.scope
+    method = o.scope.namedMethod()
     throw SyntaxError 'cannot call super outside of a function.' unless method
     {name} = method
     throw SyntaxError 'cannot call super on an anonymous function.' unless name?
@@ -642,6 +657,11 @@ exports.Call = class Call extends Base
       (new Value (new Literal method.klass), accesses).compile o
     else
       "#{name}.__super__.constructor"
+
+  # The appropriate `this` value for a `super` call.
+  superThis : (o) ->
+    method = o.scope.method
+    (method and not method.klass and method.context) or "this"
 
   # Soaked chained invocations unfold into if/else ternary structures.
   unfoldSoak: (o) ->
@@ -701,28 +721,28 @@ exports.Call = class Call extends Base
     args = @filterImplicitObjects @args
     args = (arg.compile o, LEVEL_LIST for arg in args).join ', '
     if @isSuper
-      @superReference(o) + ".call(this#{ args and ', ' + args })"
+      @superReference(o) + ".call(#{@superThis(o)}#{ args and ', ' + args })"
     else
       (if @isNew then 'new ' else '') + @variable.compile(o, LEVEL_ACCESS) + "(#{args})"
 
   # `super()` is converted into a call against the superclass's implementation
   # of the current function.
   compileSuper: (args, o) ->
-    "#{@superReference(o)}.call(this#{ if args.length then ', ' else '' }#{args})"
+    "#{@superReference(o)}.call(#{@superThis(o)}#{ if args.length then ', ' else '' }#{args})"
 
   # If you call a function with a splat, it's converted into a JavaScript
   # `.apply()` call to allow an array of arguments to be passed.
   # If it's a constructor, then things get real tricky. We have to inject an
   # inner constructor in order to be able to pass the varargs.
   compileSplat: (o, splatArgs) ->
-    return "#{ @superReference o }.apply(this, #{splatArgs})" if @isSuper
+    return "#{ @superReference o }.apply(#{@superThis(o)}, #{splatArgs})" if @isSuper
     if @isNew
       idt = @tab + TAB
       return """
         (function(func, args, ctor) {
         #{idt}ctor.prototype = func.prototype;
-        #{idt}var child = new ctor, result = func.apply(child, args), t = typeof result;
-        #{idt}return t == "object" || t == "function" ? result || child : child;
+        #{idt}var child = new ctor, result = func.apply(child, args);
+        #{idt}return Object(result) === result ? result : child;
         #{@tab}})(#{ @variable.compile o, LEVEL_LIST }, #{splatArgs}, function(){})
       """
     base = new Value @variable
@@ -902,7 +922,7 @@ exports.Slice = class Slice extends Base
         "#{+compiled + 1}"
       else
         compiled = to.compile o, LEVEL_ACCESS
-        "#{compiled} + 1 || 9e9"
+        "+#{compiled} + 1 || 9e9"
     ".slice(#{ fromStr }#{ toStr or '' })"
 
 #### Obj
@@ -916,14 +936,6 @@ exports.Obj = class Obj extends Base
 
   compileNode: (o) ->
     props = @properties
-    propNames = []
-    for prop in @properties
-      prop = prop.variable if prop.isComplex()
-      if prop?
-        propName = prop.unwrapAll().value.toString()
-        if propName in propNames
-          throw SyntaxError "multiple object literal properties named \"#{propName}\""
-        propNames.push propName
     return (if @front then '({})' else '{}') unless props.length
     if @generated
       for node in props when node instanceof Value
@@ -1449,15 +1461,21 @@ exports.Param = class Param extends Base
     for obj in name.objects
       # * assignments within destructured parameters `{foo:bar}`
       if obj instanceof Assign
-        names.push obj.variable.base.value
-      # * destructured parameters within destructured parameters `[{a}]`
-      else if obj.isArray() or obj.isObject()
-        names.push @names(obj.base)...
-      # * at-params within destructured parameters `{@foo}`
-      else if obj.this
-        names.push atParam(obj)...
-      # * simple destructured parameters {foo}
-      else names.push obj.base.value
+        names.push obj.value.unwrap().value
+      # * splats within destructured parameters `[xs...]`
+      else if obj instanceof Splat
+        names.push obj.name.unwrap().value
+      else if obj instanceof Value
+        # * destructured parameters within destructured parameters `[{a}]`
+        if obj.isArray() or obj.isObject()
+          names.push @names(obj.base)...
+        # * at-params within destructured parameters `{@foo}`
+        else if obj.this
+          names.push atParam(obj)...
+        # * simple destructured parameters {foo}
+        else names.push obj.base.value
+      else
+        throw SyntaxError "illegal parameter #{obj.compile()}"
     names
 
 #### Splat
@@ -1674,7 +1692,7 @@ exports.Op = class Op extends Base
     "(#{code})"
 
   compileExistence: (o) ->
-    if @first.isComplex() and o.level > LEVEL_TOP
+    if @first.isComplex()
       ref = new Literal o.scope.freeVariable 'ref'
       fst = new Parens new Assign ref, @first
     else
@@ -1925,8 +1943,8 @@ exports.For = class For extends While
     scope     = o.scope
     name      = @name  and @name.compile o, LEVEL_LIST
     index     = @index and @index.compile o, LEVEL_LIST
-    scope.find(name,  immediate: yes) if name and not @pattern
-    scope.find(index, immediate: yes) if index
+    scope.find(name)  if name and not @pattern
+    scope.find(index) if index
     rvar      = scope.freeVariable 'results' if @returns
     ivar      = (@object and index) or scope.freeVariable 'i'
     kvar      = (@range and name) or index or ivar
@@ -2144,7 +2162,8 @@ Closure =
 
   literalThis: (node) ->
     (node instanceof Literal and node.value is 'this' and not node.asKey) or
-      (node instanceof Code and node.bound)
+      (node instanceof Code and node.bound) or
+      (node instanceof Call and node.isSuper)
 
 # Unfold a node's child if soak, then tuck the node under created `If`
 unfoldSoak = (o, parent, name) ->
@@ -2161,10 +2180,9 @@ UTILITIES =
   # Correctly set up a prototype chain for inheritance, including a reference
   # to the superclass for `super()` calls, and copies of any static properties.
   extends: -> """
-    function(child, parent) {
-      for (var key in parent) { if (#{utility 'hasProp'}.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; 
-      child.superClass_ = parent.prototype; 
-      return child; 
+    function(child, parent) { for (var key in parent) { if (#{utility 'hasProp'}.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; 
+       child.superClass_ = parent.prototype; // google closure
+       return child; 
     }
   """
 

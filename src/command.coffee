@@ -13,6 +13,8 @@ CoffeeScript   = require './coffee-script'
 {spawn, exec}  = require 'child_process'
 {EventEmitter} = require 'events'
 
+exists         = fs.exists or path.exists
+
 # Allow CoffeeScript to emit Node.js events.
 helpers.extend CoffeeScript, new EventEmitter
 
@@ -99,9 +101,10 @@ compilePath = (source, topLevel, base) ->
         throw err if err and err.code isnt 'ENOENT'
         return if err?.code is 'ENOENT'
         index = sources.indexOf source
+        files = files.filter (file) -> not hidden file
         sources[index..index] = (path.join source, file for file in files)
         sourceCode[index..index] = files.map -> null
-        for file in files when not hidden file
+        files.forEach (file) ->
           compilePath (path.join source, file), no, base
     else if topLevel or path.extname(source) is '.coffee'
       watch source, base if opts.watch
@@ -247,8 +250,8 @@ removeSource = (source, base, removeJs) ->
   sourceCode.splice index, 1
   if removeJs and not opts.join
     jsPath = outputPath source, base
-    path.exists jsPath, (exists) ->
-      if exists
+    exists jsPath, (itExists) ->
+      if itExists
         fs.unlink jsPath, (err) ->
           throw err if err and err.code isnt 'ENOENT'
           timeLog "removed #{source}"
@@ -274,8 +277,8 @@ writeJs = (source, js, base) ->
         printLine err.message
       else if opts.compile and opts.watch
         timeLog "compiled #{source}"
-  path.exists jsDir, (exists) ->
-    if exists then compile() else exec "mkdir -p #{jsDir}", compile
+  exists jsDir, (itExists) ->
+    if itExists then compile() else exec "mkdir -p #{jsDir}", compile
 
 # Convenience for cleaner setTimeouts.
 wait = (milliseconds, func) -> setTimeout func, milliseconds

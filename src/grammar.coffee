@@ -130,10 +130,9 @@ grammar =
     o 'JS',                                     -> new Literal $1
     o 'REGEX',                                  -> new Literal $1
     o 'DEBUGGER',                               -> new Literal $1
-    o 'BOOL',                                   ->
-      val = new Literal $1
-      val.isUndefined = yes if $1 is 'undefined'
-      val
+    o 'UNDEFINED',                              -> new Undefined
+    o 'NULL',                                   -> new Null
+    o 'BOOL',                                   -> new Bool $1
   ]
 
   # Assignment of a variable, property, or index to a value.
@@ -196,6 +195,8 @@ grammar =
     o '',                                       -> []
     o 'Param',                                  -> [$1]
     o 'ParamList , Param',                      -> $1.concat $3
+    o 'ParamList OptComma TERMINATOR Param',    -> $1.concat $4
+    o 'ParamList OptComma INDENT ParamList OptComma OUTDENT', -> $1.concat $4
   ]
 
   # A single parameter in a function definition can be ordinary, or a splat
@@ -481,6 +482,7 @@ grammar =
   # This enables support for pattern matching.
   ForValue: [
     o 'Identifier'
+    o 'ThisProperty'
     o 'Array',                                  -> new Value $1
     o 'Object',                                 -> new Value $1
   ]
