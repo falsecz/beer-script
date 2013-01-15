@@ -1134,6 +1134,10 @@ exports.Class = class Class extends Base
 
     call  = Closure.wrap @body
 
+    if @uses
+      usesArg = new Value new Literal (u.flatten() for u in @uses).join ', '
+      @body.expressions.unshift new Call(new Value(new Literal utility 'uses'), [lname, usesArg])
+
     if @parent
       @superClass = new Literal o.scope.freeVariable 'super', no
       @body.expressions.unshift new Extends lname, @superClass
@@ -1141,9 +1145,6 @@ exports.Class = class Class extends Base
       params = call.variable.params or call.variable.base.params
       params.push new Param @superClass
     
-    if @uses
-      usesArg = new Value new Literal (u.flatten() for u in @uses).join ', '
-      @body.expressions.unshift new Call(new Value(new Literal utility 'uses'), [lname, usesArg])
 
     if o.goog
       o.goog.provides.push @variable.compile o
