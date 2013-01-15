@@ -198,6 +198,11 @@ grammar =
     o 'ParamList OptComma TERMINATOR Param',    -> $1.concat $4
     o 'ParamList OptComma INDENT ParamList OptComma OUTDENT', -> $1.concat $4
   ]
+  
+  NamespaceList: [
+    o 'Namespace',                              -> [$1]
+    o 'NamespaceList , Namespace',              -> $1.concat $3
+  ]
 
   # A single parameter in a function definition can be ordinary, or a splat
   # that hoovers up the remaining arguments.
@@ -293,8 +298,12 @@ grammar =
     o 'CLASS SimpleAssignable EXTENDS Expression',       -> new Class $2, $4
     o 'CLASS SimpleAssignable EXTENDS Expression Block', -> new Class $2, $4, $5
 
-    o 'CLASS SimpleAssignable IMPLEMENTS Expression Block',                    -> new Class $2, null, $5
-
+    o 'CLASS USES NamespaceList TERMINATOR',        	  -> new Class null, null, null, $3 
+    o 'CLASS USES NamespaceList Block',     		      -> new Class null, null, null, $3
+    o 'CLASS SimpleAssignable USES NamespaceList TERMINATOR',     -> new Class $2, null, null, $4
+    o 'CLASS SimpleAssignable USES NamespaceList Block',          -> new Class $2, null, null, $4 
+    o 'CLASS SimpleAssignable EXTENDS Expression USES NamespaceList TERMINATOR', -> new Class $2, $4, null, $6
+    o 'CLASS SimpleAssignable EXTENDS Expression USES NamespaceList Block',      -> new Class $2, $4, null, $6
   ]
 
   # Ordinary function invocation, or a chained series of calls.
@@ -580,7 +589,6 @@ grammar =
     o 'SimpleAssignable COMPOUND_ASSIGN
        INDENT Expression OUTDENT',              -> new Assign $1, $4, $2
     o 'SimpleAssignable EXTENDS Expression',    -> new Extends $1, $3
-    o 'SimpleAssignable IMPLEMENTS Expression',    -> new Implements $1, $3
   ]
 
 
@@ -608,7 +616,7 @@ operators = [
   ['left',      'COMPARE']
   ['left',      'LOGIC']
   ['nonassoc',  'INDENT', 'OUTDENT']
-  ['right',     '=', ':', 'COMPOUND_ASSIGN', 'RETURN', 'THROW', 'EXTENDS', 'IMPLEMENTS']
+  ['right',     '=', ':', 'COMPOUND_ASSIGN', 'RETURN', 'THROW', 'EXTENDS', 'USES']
   ['right',     'FORIN', 'FOROF', 'BY', 'WHEN']
   ['right',     'IF', 'ELSE', 'FOR', 'WHILE', 'UNTIL', 'LOOP', 'SUPER', 'CLASS', 'ENUMERATION']
   ['right',     'POST_IF']

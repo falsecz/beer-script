@@ -996,12 +996,16 @@ exports.Arr = class Arr extends Base
 # The CoffeeScript class definition.
 # Initialize a **Class** with its name, an optional superclass, and a
 # list of prototype property assignments.
+exports.Uses = class Uses extends Base
+  constructor: (@variable, @parent, @body = new Block, @uses) ->
+    console.log 'uuuuuu', arguments
+	
 exports.Class = class Class extends Base
-  constructor: (@variable, @parent, @body = new Block) ->
+  constructor: (@variable, @parent, @body = new Block, @uses = null) ->
     @boundFuncs = []
     @body.classBody = yes
 
-  children: ['variable', 'parent', 'body']
+  children: ['variable', 'parent', 'body', 'mixin']
 
   # Figure out the appropriate name for the constructor function of this class.
   determineName: ->
@@ -1140,6 +1144,10 @@ exports.Class = class Class extends Base
       call.args.push @parent
       params = call.variable.params or call.variable.base.params
       params.push new Param @superClass
+    
+    if @uses
+      usesArg = new Value new Literal (u.flatten() for u in @uses).join ', '
+      @body.expressions.unshift new Call(new Value(new Literal utility 'uses'), [lname, usesArg])
 
     if o.goog
       o.goog.provides.push @variable.compile o
@@ -2184,6 +2192,18 @@ UTILITIES =
        child.superClass_ = parent.prototype; // google closure
        return child; 
     }
+  """
+
+  uses: -> """
+  function (base, mixins) {
+    var _mixin, _i, _l, _tmp, _prop, _val;
+    for (var _i = 0, _l = mixins.length; _i < _l; _i++) {
+      _tmp = mixins[_i];
+      for (_prop in _tmp) {
+        base[_prop] = _tmp[_prop];
+      }
+    }
+  }
   """
 
   # Create a function bound to the current value of "this".

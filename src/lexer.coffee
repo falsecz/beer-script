@@ -526,7 +526,7 @@ exports.Lexer = class Lexer
   unfinished: ->
     LINE_CONTINUER.test(@chunk) or
     @tag() in ['\\', '.', '?.', 'UNARY', 'MATH', '+', '-', 'SHIFT', 'RELATION'
-               'COMPARE', 'LOGIC', 'THROW', 'EXTENDS', 'IMPLEMENTS']
+               'COMPARE', 'LOGIC', 'THROW', 'EXTENDS', 'USES']
 
   # Converts newlines for string literals.
   escapeLines: (str, heredoc) ->
@@ -557,7 +557,7 @@ JS_KEYWORDS = [
 ]
 
 # CoffeeScript-only keywords.
-COFFEE_KEYWORDS = ['undefined', 'then', 'unless', 'until', 'loop', 'of', 'by', 'when', 'enumeration', 'include', 'as', 'implements']
+COFFEE_KEYWORDS = ['undefined', 'then', 'unless', 'until', 'loop', 'of', 'by', 'when', 'enumeration', 'include', 'as', 'uses']
 
 COFFEE_ALIAS_MAP =
   and  : '&&'
