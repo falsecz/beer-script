@@ -22,3 +22,15 @@ test "Private variables", ->
   eq typeof t.private, 'undefined'
   eq t.dolar(), 10
 
+
+
+test "Enumerations", ->
+	enumeration test.Enum
+		VAR1: "var1"
+		VAR2: "var2"
+	
+	eq test.Enum.VAR1, 'var1'
+		
+
+	
+	
