@@ -299,11 +299,11 @@ grammar =
     o 'CLASS SimpleAssignable EXTENDS Expression Block', -> new Class $2, $4, $5
 
     o 'CLASS USES NamespaceList TERMINATOR',        	  -> new Class null, null, null, $3 
-    o 'CLASS USES NamespaceList Block',     		      -> new Class null, null, null, $3
+    o 'CLASS USES NamespaceList Block',     		      -> new Class null, null, $4, $3
     o 'CLASS SimpleAssignable USES NamespaceList TERMINATOR',     -> new Class $2, null, null, $4
-    o 'CLASS SimpleAssignable USES NamespaceList Block',          -> new Class $2, null, null, $4 
+    o 'CLASS SimpleAssignable USES NamespaceList Block',          -> new Class $2, null, $5, $4 
     o 'CLASS SimpleAssignable EXTENDS Expression USES NamespaceList TERMINATOR', -> new Class $2, $4, null, $6
-    o 'CLASS SimpleAssignable EXTENDS Expression USES NamespaceList Block',      -> new Class $2, $4, null, $6
+    o 'CLASS SimpleAssignable EXTENDS Expression USES NamespaceList Block',      -> new Class $2, $4, $7, $6
   ]
 
   # Ordinary function invocation, or a chained series of calls.

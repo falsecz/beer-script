@@ -996,10 +996,6 @@ exports.Arr = class Arr extends Base
 # The CoffeeScript class definition.
 # Initialize a **Class** with its name, an optional superclass, and a
 # list of prototype property assignments.
-exports.Uses = class Uses extends Base
-  constructor: (@variable, @parent, @body = new Block, @uses) ->
-    console.log 'uuuuuu', arguments
-	
 exports.Class = class Class extends Base
   constructor: (@variable, @parent, @body = new Block, @uses = null) ->
     @boundFuncs = []
@@ -2195,7 +2191,8 @@ UTILITIES =
   """
 
   uses: -> """
-  function (base, mixins) {
+  function (base) {
+    mixins = Array.prototype.splice.call(arguments, 1);
     var _mixin, _i, _l, _tmp, _prop, _val;
     for (var _i = 0, _l = mixins.length; _i < _l; _i++) {
       _tmp = mixins[_i];
