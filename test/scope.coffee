@@ -48,14 +48,15 @@ test "#2255: global leak with splatted @-params", ->
   ok not x?
 
 test "#1183: super + fat arrows", ->
+  # removed _i var because _ prefix is for private
   dolater = (cb) -> cb()
 
   class A
   	constructor: ->
-  		@_i = 0
+  		@i = 0
   	foo : (cb) ->
   		dolater => 
-  			@_i += 1 
+  			@i += 1 
   			cb()
 
   class B extends A
@@ -64,11 +65,11 @@ test "#1183: super + fat arrows", ->
   	foo : (cb) ->
   		dolater =>
   			dolater =>
-  				@_i += 2
+  				@i += 2
   				super cb
           
   b = new B
-  b.foo => eq b._i, 3
+  b.foo => eq b.i, 3
 
 test "#1183: super + wrap", ->
   class A
