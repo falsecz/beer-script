@@ -84,6 +84,12 @@ exports.Base = class Base
     else
       new Return me
 
+  # Sets the static type annotation on this node to the given type expression
+  # This lets us annotate variables and expressions as having an optional static type
+  typeAnnotate: (typeExp) ->
+    @typeAnnotation = typeExp
+    @
+    
   # Does this node, or any of its children, contain a node of a certain kind?
   # Recursively traverses down the *children* of the nodes, yielding to a block
   # and returning true when the block finds a match. `contains` does not cross
@@ -416,14 +422,26 @@ exports.Block = class Block extends Base
     if scope.expressions is this
       declars = o.scope.hasDeclarations()
       assigns = scope.hasAssignments
-      if declars or assigns
-        code += '\n' if i
+      code += '\n' if i and (declars or assigns)
+      if declars
+        noTypeVars = []
+        for name in scope.declaredVariables()
+          if typeName = scope.typeAnnotation(name)?.value
+              code += "#{@tab}/** @type {#{typeName}} */\n"
+              code += "#{@tab}var #{name};\n"
+          else
+            noTypeVars.push name
+        if noTypeVars.length > 0
+          code += "#{@tab}var #{noTypeVars.join(', ')};\n"
+            
+      #if declars or assigns
+      if assigns
         code += "#{@tab}var "
-        if declars
-          code += scope.declaredVariables().join ', '
-        if assigns
-          code += ",\n#{@tab + TAB}" if declars
-          code += scope.assignedVariables().join ",\n#{@tab + TAB}"
+        # if declars
+        #   code += scope.declaredVariables().join ', '
+        # if assigns
+        # code += ",\n#{@tab + TAB}" if declars
+        code += scope.assignedVariables().join ",\n#{@tab + TAB}"
         code += ';\n'
     code + post
 
@@ -1205,6 +1223,8 @@ exports.Assign = class Assign extends Base
           o.scope.add name, 'var'
         else
           o.scope.find name
+        o.scope.typeAnnotate(name, ta) if ta = @variable.typeAnnotation #assign var annotation to scope
+          
     if @value instanceof Code and match = METHOD_DEF.exec name
       @value.klass = match[1] if match[1]
       @value.name  = match[2] ? match[3] ? match[4] ? match[5]

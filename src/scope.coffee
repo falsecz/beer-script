@@ -20,6 +20,7 @@ exports.Scope = class Scope
   constructor: (@parent, @expressions, @method) ->
     @variables = [{name: 'arguments', type: 'arguments'}]
     @positions = {}
+    @typeAnnotations = {}
     Scope.root = this unless @parent
 
   # Adds a new variable or overrides an existing one.
@@ -57,6 +58,14 @@ exports.Scope = class Scope
   check: (name) ->
     !!(@type(name) or @parent?.check(name))
 
+  # registers the given type annotation for the given name
+  typeAnnotate: (name, typeAnn) ->
+    if typeAnn
+      @typeAnnotations[name] = typeAnn
+
+  typeAnnotation: (name) ->
+    @typeAnnotations[name]
+    
   # Generate a temporary variable name at the given index.
   temporary: (name, index) ->
     if name.length > 1
