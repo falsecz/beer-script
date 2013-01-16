@@ -23,6 +23,7 @@
   * include goog.dom as dom via --goog switch
   * auto include base class
   * support for enumeration
+  * support for uses (mixins) [experimental]
 
 
 
@@ -38,6 +39,10 @@ class builder.ui.ColumnLayout extends goog.ui.Component
 enumeration builder.ui.ColumnLayout.ORIENTATION
    VERTICAL: 'vertical'
    HORIZONTAL: 'horizontal'
+   
+
+class builder.ui.Tree extends goog.ui.Component uses builder.mixins.repository
+  
 ```
 
 ```javascript
